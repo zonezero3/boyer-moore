@@ -1,76 +1,122 @@
 
 #include <iostream>
-#include <stdio.h>
+#include <random>
+#include <string>
 
-#define NO_OF_CHARS 256
+#define MAX_CHAR_NUM 256
+#define TEXT_LENGTH 1000000
+#define PATTERN_LENGTH 10
 
-int zstrlen(const char* str)
+//extern std::string random_string(std::string::size_type length);
+
+int badChar[MAX_CHAR_NUM];
+char text[TEXT_LENGTH];
+char pattern[PATTERN_LENGTH];
+
+int max(int a, int b) {return a > b ? a: b;}
+std::string strText;
+std::string strPat;
+
+
+void zstrcpy(char *a, const char *b)
 {
-	register int i = 0;
-
-	while (str[i] != '\0')
+	int i = 0;
+	while (b[i] != '\0')
+	{
+		a[i] = b[i];
 		++i;
-	return i;
+	}
+	a[i] = '\0';
 }
 
-void badChar(const char* pat, int m, char badArr[NO_OF_CHARS])
+int zstrlen(const char* s)
 {
-	for (int i = 0; i < NO_OF_CHARS; ++i)
-		badArr[i] = -1;
+	int i = 0;
 
-	for (int i = 0; i < m; ++i)
+	while (s[i] != '\0')
 	{
-		badArr[pat[i] - 'A'] = i;
+		++i;
+	}
+	return i;
+
+}
+void random_string(std::string::size_type txtlength, std::string::size_type patlength)
+{
+	static auto& chrs = "0123456789"
+		"abcdefghijklmnopqrstuvwxyz"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	thread_local static std::mt19937 rg1{ std::random_device{}() };
+	thread_local static std::uniform_int_distribution<std::string::size_type> pick(0, sizeof(chrs) - 2);
+
+	thread_local static std::mt19937 rg2{ std::random_device{}() };
+	thread_local static std::uniform_int_distribution<int> distribution(0, txtlength - patlength - 1);
+
+	std::string s;
+
+	s.reserve(txtlength);
+
+	while (txtlength--)
+		s += chrs[pick(rg1)];
+
+	zstrcpy(text, s.c_str());
+
+	int patStart = distribution(rg2);
+
+	for (int i = 0; i < patlength; ++i)
+	{
+		pattern[i] = text[patStart + i];
+	}
+
+}
+
+
+
+void badCharPre(char *pattern, int patLength)
+{
+	for (register int i = 0; i < MAX_CHAR_NUM; ++i)
+	{
+		badChar[i] = -1;
+	}
+
+	for (register int i = 0; i < patLength; ++i)
+	{
+		badChar[pattern[i]] = i;
 	}
 }
 
-void search(const char* txt, const char* pat)
+void badCharRule(char *pattern, int patLength, char* text, int txtLength)
 {
-	int m,n;
-	n = zstrlen(txt);
-	m = zstrlen(pat);
-	char badArr[NO_OF_CHARS];
-
-	badChar(pat, m, badArr);
-
-	int s = 0;
+	int shift = 0;
 	int j;
-
-	while (s<=(n-m))
+	while (shift <= txtLength-patLength)
 	{
-		j = m - 1;
-		while (j >= 0 && pat[j] == txt[s + j])
+		j = patLength-1;
+		while (j >= 0 && text[shift + j] == pattern[j])
 			--j;
 
 		if (j < 0)
 		{
-			std::cout << "Pattern Match at " << s << std::endl;
-			return;
+			std::cout << "MATCH AT " << shift << std::endl;
+			shift += (shift + patLength <txtLength ? patLength - badChar[text[patLength]]:1);
+
 		}
 		else
 		{
-			if (badArr[txt[s + j] - 'A'] == -1)
-			{
-				s += m-j;
-			}
-			else
-			{
-				int a= j - badArr[txt[s + j] - 'A'];
-				if (a > 1)
-					s += a;
-				else
-					s += 1;
-			}
-
+			shift += max(1, j - badChar[text[shift + j]]);
 		}
+
 	}
 }
 
-
-int main()
+void main()
 {
-	char txt[] = "ABAASDFGHJKLGHJKLKJHGFDFGHJIUYTRERTYUIOIHGCVBNMNGFDSDHYJKJHGFGHJKLLKJZXCVBNMAABCD";
-	char pat[] = "ABC";
-	search(txt, pat);
-	return 0;
+	random_string(TEXT_LENGTH,PATTERN_LENGTH);
+
+	//zstrcpy(text, "jlkjasdfkljasafasdfdasfasfflkjsflABCfdsfasfsdfasd");
+	//zstrcpy(pattern,"ABC");
+
+	badCharPre(pattern, zstrlen(pattern));
+	badCharRule(pattern, zstrlen(pattern), text, zstrlen(text));
+
 }
